@@ -1,5 +1,3 @@
-# qa-bot-interface
-
 # QA Bot Interface
 
 ## Overview
