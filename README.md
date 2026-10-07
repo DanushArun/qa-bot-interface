@@ -1,62 +1,59 @@
-# QA Bot Interface
+# PDF QA Bot
 
-## Overview
-This project implements a Retrieval-Augmented Generation (RAG) model for a Question Answering (QA) bot. It uses Streamlit for the user interface, SentenceTransformer for embedding generation, and Cohere for text generation.
+A Streamlit experiment that extracts text from a PDF, embeds the document and asks Cohere
+to generate an answer from the retrieved text.
 
-## Features
-- PDF document upload and processing
-- In-memory vector storage for document embeddings
-- Cosine similarity search for relevant document retrieval
-- Generative QA using Cohere's language model
+## How it works
 
-## Setup Instructions
-1. Clone this repository:
-   ```
-   git clone https://github.com/DanushArun/qa-bot-interface.git
-   cd qa-bot-interface
-   ```
+```mermaid
+flowchart LR
+    PDF[Uploaded PDF] --> Text[Extracted text]
+    Text --> Vector[One document embedding]
+    Question --> Query[Question embedding]
+    Vector --> Retrieve[Dot-product ranking]
+    Query --> Retrieve
+    Retrieve --> Cohere[Cohere generation]
+    Cohere --> UI[Answer and retrieved text]
+```
 
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+[app.py](app.py) embeds each entire PDF with `all-MiniLM-L6-v2`; it does not split pages into
+chunks. Retrieval uses a dot product, not normalized cosine similarity. The UI displays the
+retrieved document text alongside the answer, without page-level citations.
 
-3. Set up environment variables:
-   Create a `.env` file in the project root and add your Cohere API key:
-   ```
-   COHERE_API_KEY=your_cohere_api_key_here
-   ```
+## Local setup
 
-## Usage
-1. Run the Streamlit app:
-   ```
-   streamlit run app.py
-   ```
+```bash
+git clone https://github.com/DanushArun/qa-bot-interface.git
+cd qa-bot-interface
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
 
-2. Open the provided URL in your web browser.
-3. Upload a PDF document using the file uploader.
-4. Ask questions about the document content in the text input field.
+Create a local `.env` containing `COHERE_API_KEY` with your own key, then run:
 
-## Docker Setup
-1. Build the Docker image:
-   ```
-   docker build -t qa-bot-interface .
-   ```
-2. Run the Docker container:
-   ```
-   docker run -p 8501:8501 qa-bot-interface
-   ```
-3. Open `http://localhost:8501` in your web browser.
+```bash
+streamlit run app.py
+```
 
-## Components
-- Streamlit: Provides the web interface for user interaction
-- SentenceTransformer: Generates embeddings for document text and queries
-- Cohere: Generates human-like responses based on retrieved context
+The first embedding-model load downloads model files. Generation sends the selected document
+text and question to Cohere. Use documents you are authorized to send to that provider.
+The code selects `command-xlarge-nightly`; current model availability and SDK compatibility
+were not verified with a live account during this documentation update.
 
-## Limitations and Future Improvements
-- Current implementation uses in-memory storage, which is not persistent
-- Scaling to larger datasets may require integration with a vector database
-- Improved error handling and user feedback could enhance the user experience
+## Repository contents
 
-## License
-MIT License
+- [app.py](app.py): PDF extraction, embedding, retrieval, generation and UI.
+- [requirements.txt](requirements.txt): pinned Python dependencies.
+- A Dockerfile is stored inside an unusually named nested directory, not at the root.
+  A root `docker build .` therefore does not use it.
+
+## Evidence and limitations
+
+Python syntax and README structure were checked. No paid API call or interactive QA evaluation
+was performed, and there is no automated test suite in this checkout.
+
+Document vectors are held in module-level lists and are not durable across reruns/restarts.
+Streamlit reruns can reprocess uploads. Long PDFs exceed the embedding model's text window;
+there is no OCR, chunk retrieval, relevance threshold or factual answer verification.
+The prompt encourages use of context but does not enforce source-only answers.
